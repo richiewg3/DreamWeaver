@@ -21,11 +21,20 @@
 
 :root {
   color-scheme: dark;
+  /* Prevent iOS zoom on input focus */
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-midnight-500) var(--color-midnight-800);
+  /* Prevent text selection on touch */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
 }
 
 body {
@@ -33,6 +42,8 @@ body {
   background: linear-gradient(135deg, var(--color-midnight-900) 0%, var(--color-midnight-800) 50%, #0f0a1a 100%);
   color: #e2e8f0;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  overflow-x: hidden;
 }
 
 .font-prose {
@@ -145,6 +156,14 @@ input, textarea {
   background: rgba(18, 18, 26, 0.8);
   border: 1px solid rgba(99, 102, 241, 0.2);
   transition: all 0.2s ease;
+  /* Prevent iOS zoom on focus */
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  input, textarea {
+    font-size: 14px;
+  }
 }
 
 input:focus, textarea:focus {
@@ -161,4 +180,39 @@ input:focus, textarea:focus {
     rgba(168, 85, 247, 0.5) 50%, 
     rgba(99, 102, 241, 0.3) 80%, 
     transparent);
+}
+
+/* Mobile-specific styles */
+@media (max-width: 767px) {
+  /* Touch-friendly button sizing */
+  button {
+    min-height: 44px;
+  }
+  
+  /* Improve scrolling on mobile */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Asset cards touch feedback */
+  .asset-card:active {
+    transform: scale(0.97);
+  }
+  
+  /* Beat row touch feedback */
+  .beat-row:active {
+    background: linear-gradient(90deg, rgba(37, 37, 53, 0.8) 0%, rgba(26, 26, 37, 0.6) 100%);
+  }
+  
+  /* Bottom safe area for iOS */
+  .pb-safe {
+    padding-bottom: calc(1rem + var(--safe-area-inset-bottom));
+  }
+}
+
+/* Ensure bottom tab bar accounts for safe area on iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  nav[class*="fixed bottom-0"] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

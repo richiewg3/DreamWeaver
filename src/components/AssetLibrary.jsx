@@ -29,6 +29,7 @@ const AssetLibrary = ({
   onToggleLocation,
   onUpdateCharacterName,
   onUpdateLocationName,
+  isMobile = false,
 }) => {
   const [activeTab, setActiveTab] = useState('characters');
   const [editingId, setEditingId] = useState(null);
@@ -170,15 +171,15 @@ const AssetLibrary = ({
   };
 
   const renderEmptyState = (type) => (
-    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-midnight-700/50 flex items-center justify-center mb-4">
-        <ImageIcon className="w-8 h-8 text-gray-500" />
+    <div className="flex flex-col items-center justify-center py-6 md:py-8 px-4 text-center">
+      <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-midnight-700/50 flex items-center justify-center mb-3 md:mb-4">
+        <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-500" />
       </div>
-      <p className="text-gray-400 text-sm mb-2">
+      <p className="text-gray-400 text-xs md:text-sm mb-1 md:mb-2">
         No {type === 'character' ? 'characters' : 'locations'} yet
       </p>
-      <p className="text-gray-500 text-xs">
-        Upload images to build your asset library
+      <p className="text-gray-500 text-[10px] md:text-xs">
+        Upload images to build your library
       </p>
     </div>
   );
@@ -190,42 +191,44 @@ const AssetLibrary = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-indigo-500/10">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-purple-400" />
-          <h2 className="text-lg font-semibold gradient-text">Asset Library</h2>
+      <div className="p-3 md:p-4 border-b border-indigo-500/10">
+        <div className="flex items-center gap-2 mb-3 md:mb-4">
+          <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+          <h2 className="text-base md:text-lg font-semibold gradient-text">Asset Library</h2>
         </div>
         
         {/* Tabs */}
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('characters')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 md:py-2.5 px-3 md:px-4 rounded-xl text-xs md:text-sm font-medium transition-all ${
               activeTab === 'characters'
                 ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30'
                 : 'text-gray-400 hover:text-gray-300 hover:bg-midnight-700/50'
             }`}
           >
             <User className="w-4 h-4" />
-            Characters
+            <span className="hidden sm:inline">Characters</span>
+            <span className="sm:hidden">Chars</span>
             {selectedCharacters.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-purple-500/30 text-purple-300">
+              <span className="ml-0.5 md:ml-1 px-1.5 py-0.5 text-[10px] md:text-xs rounded-full bg-purple-500/30 text-purple-300">
                 {selectedCharacters.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('locations')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 md:py-2.5 px-3 md:px-4 rounded-xl text-xs md:text-sm font-medium transition-all ${
               activeTab === 'locations'
                 ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30'
                 : 'text-gray-400 hover:text-gray-300 hover:bg-midnight-700/50'
             }`}
           >
             <MapPin className="w-4 h-4" />
-            Locations
+            <span className="hidden sm:inline">Locations</span>
+            <span className="sm:hidden">Locs</span>
             {selectedLocations.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-cyan-500/30 text-cyan-300">
+              <span className="ml-0.5 md:ml-1 px-1.5 py-0.5 text-[10px] md:text-xs rounded-full bg-cyan-500/30 text-cyan-300">
                 {selectedLocations.length}
               </span>
             )}
@@ -234,23 +237,23 @@ const AssetLibrary = ({
       </div>
 
       {/* Upload Area */}
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         <div
           onDrop={(e) => handleDrop(e, assetType)}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => currentInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-xl p-4 md:p-6 text-center cursor-pointer transition-all active:scale-[0.98] ${
             dragOver
               ? 'border-purple-400 bg-purple-500/10'
               : 'border-midnight-500 hover:border-purple-500/50 hover:bg-midnight-700/30'
           }`}
         >
-          <Upload className={`w-8 h-8 mx-auto mb-2 ${dragOver ? 'text-purple-400' : 'text-gray-500'}`} />
-          <p className="text-sm text-gray-400">
-            Drop images here or <span className="text-purple-400">browse</span>
+          <Upload className={`w-6 h-6 md:w-8 md:h-8 mx-auto mb-2 ${dragOver ? 'text-purple-400' : 'text-gray-500'}`} />
+          <p className="text-xs md:text-sm text-gray-400">
+            {isMobile ? 'Tap to upload' : 'Drop images here or'} <span className="text-purple-400">{isMobile ? 'images' : 'browse'}</span>
           </p>
-          <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP supported</p>
+          <p className="text-[10px] md:text-xs text-gray-500 mt-1">PNG, JPG, WebP</p>
         </div>
         
         <input
@@ -272,11 +275,11 @@ const AssetLibrary = ({
       </div>
 
       {/* Asset Grid */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-4 pb-3 md:pb-4">
         {currentAssets.length === 0 ? (
           renderEmptyState(assetType)
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-2 md:gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {currentAssets.map((asset) => renderAssetCard(asset, assetType))}
           </div>
         )}
@@ -284,17 +287,17 @@ const AssetLibrary = ({
 
       {/* Selection Summary */}
       {(selectedCharacters.length > 0 || selectedLocations.length > 0) && (
-        <div className="p-4 border-t border-indigo-500/10 bg-midnight-800/50">
-          <p className="text-xs text-gray-400 mb-2">Selected for generation:</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="p-3 md:p-4 border-t border-indigo-500/10 bg-midnight-800/50">
+          <p className="text-[10px] md:text-xs text-gray-400 mb-2">Selected for generation:</p>
+          <div className="flex flex-wrap gap-1.5 md:gap-2">
             {selectedCharacters.map((id) => {
               const char = characters.find((c) => c.id === id);
               return char ? (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 text-xs"
+                  className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg bg-purple-500/20 text-purple-300 text-[10px] md:text-xs"
                 >
-                  <User className="w-3 h-3" />
+                  <User className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   {char.name}
                 </span>
               ) : null;
@@ -304,9 +307,9 @@ const AssetLibrary = ({
               return loc ? (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 text-xs"
+                  className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg bg-cyan-500/20 text-cyan-300 text-[10px] md:text-xs"
                 >
-                  <MapPin className="w-3 h-3" />
+                  <MapPin className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   {loc.name}
                 </span>
               ) : null;
