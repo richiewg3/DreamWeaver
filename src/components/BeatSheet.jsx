@@ -50,17 +50,17 @@ const BeatSheet = ({
       isGenerating: false,
       error: null,
     };
-    setBeats([...beats, newBeat]);
+    setBeats(prevBeats => [...prevBeats, newBeat]);
   };
 
   const updateBeat = (id, field, value) => {
-    setBeats(beats.map((beat) => 
+    setBeats(prevBeats => prevBeats.map((beat) => 
       beat.id === id ? { ...beat, [field]: value } : beat
     ));
   };
 
   const removeBeat = (id) => {
-    setBeats(beats.filter((beat) => beat.id !== id));
+    setBeats(prevBeats => prevBeats.filter((beat) => beat.id !== id));
     if (expandedBeat === id) setExpandedBeat(null);
   };
 
