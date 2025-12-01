@@ -18,8 +18,10 @@ import {
   Aperture,
   Minimize2,
   Maximize2,
+  HelpCircle,
 } from 'lucide-react';
 import { generatePrompt } from '../services/gemini';
+import VisualGuide, { ShotTypePreview, CameraAnglePreview, LightingPreview } from './VisualGuide';
 
 // Shot type options for cinematography
 const SHOT_TYPES = [
@@ -88,6 +90,8 @@ const BeatSheet = ({
   const [collapsedBeats, setCollapsedBeats] = useState(new Set());
   const [loadingBeat, setLoadingBeat] = useState(null);
   const [copiedBeat, setCopiedBeat] = useState(null);
+  const [showVisualGuide, setShowVisualGuide] = useState(false);
+  const [visualGuideTab, setVisualGuideTab] = useState('shots');
 
   const getBeatLabel = (index) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -246,6 +250,15 @@ const BeatSheet = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Visual Guide Button */}
+          <button
+            onClick={() => setShowVisualGuide(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors text-xs font-medium"
+            title="Visual Reference Guide"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Visual Guide</span>
+          </button>
           {beats.length > 0 && (
             <div className="hidden sm:flex items-center gap-1 mr-2">
               <button
@@ -394,53 +407,95 @@ const BeatSheet = ({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
                         {/* Shot Type */}
                         <div>
-                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
-                            <Camera className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                            Shot Type
+                          <label className="flex items-center justify-between text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <Camera className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                              Shot Type
+                            </span>
+                            <button
+                              onClick={() => { setVisualGuideTab('shots'); setShowVisualGuide(true); }}
+                              className="p-0.5 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                              title="View shot type examples"
+                            >
+                              <HelpCircle className="w-3 h-3" />
+                            </button>
                           </label>
-                          <select
-                            value={beat.shotType || ''}
-                            onChange={(e) => updateBeat(beat.id, 'shotType', e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
-                          >
-                            {SHOT_TYPES.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          <div className="flex items-center gap-2">
+                            {beat.shotType && (
+                              <ShotTypePreview type={beat.shotType} />
+                            )}
+                            <select
+                              value={beat.shotType || ''}
+                              onChange={(e) => updateBeat(beat.id, 'shotType', e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                            >
+                              {SHOT_TYPES.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
                         {/* Camera Angle */}
                         <div>
-                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
-                            <Aperture className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                            Camera Angle
+                          <label className="flex items-center justify-between text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <Aperture className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                              Camera Angle
+                            </span>
+                            <button
+                              onClick={() => { setVisualGuideTab('angles'); setShowVisualGuide(true); }}
+                              className="p-0.5 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                              title="View camera angle examples"
+                            >
+                              <HelpCircle className="w-3 h-3" />
+                            </button>
                           </label>
-                          <select
-                            value={beat.cameraAngle || ''}
-                            onChange={(e) => updateBeat(beat.id, 'cameraAngle', e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
-                          >
-                            {CAMERA_ANGLES.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          <div className="flex items-center gap-2">
+                            {beat.cameraAngle && (
+                              <CameraAnglePreview type={beat.cameraAngle} />
+                            )}
+                            <select
+                              value={beat.cameraAngle || ''}
+                              onChange={(e) => updateBeat(beat.id, 'cameraAngle', e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                            >
+                              {CAMERA_ANGLES.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
                         {/* Lighting */}
                         <div>
-                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
-                            <Sun className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                            Lighting
+                          <label className="flex items-center justify-between text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <Sun className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                              Lighting
+                            </span>
+                            <button
+                              onClick={() => { setVisualGuideTab('lighting'); setShowVisualGuide(true); }}
+                              className="p-0.5 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                              title="View lighting examples"
+                            >
+                              <HelpCircle className="w-3 h-3" />
+                            </button>
                           </label>
-                          <select
-                            value={beat.lighting || ''}
-                            onChange={(e) => updateBeat(beat.id, 'lighting', e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
-                          >
-                            {LIGHTING_PRESETS.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          <div className="flex items-center gap-2">
+                            {beat.lighting && (
+                              <LightingPreview type={beat.lighting} />
+                            )}
+                            <select
+                              value={beat.lighting || ''}
+                              onChange={(e) => updateBeat(beat.id, 'lighting', e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                            >
+                              {LIGHTING_PRESETS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
 
@@ -546,6 +601,13 @@ const BeatSheet = ({
           })
         )}
       </div>
+
+      {/* Visual Guide Modal */}
+      <VisualGuide
+        isOpen={showVisualGuide}
+        onClose={() => setShowVisualGuide(false)}
+        initialTab={visualGuideTab}
+      />
     </div>
   );
 };
