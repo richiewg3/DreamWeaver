@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   LOCATIONS: 'dreamweaver_locations',
   STORY_CONTEXT: 'dreamweaver_story_context',
   BEATS: 'dreamweaver_beats',
+  SAVED_STORIES: 'dreamweaver_saved_stories',
+  CURRENT_STORY_ID: 'dreamweaver_current_story_id',
 };
 
 /**
@@ -224,12 +226,175 @@ export const loadBeats = () => {
 };
 
 /**
- * Clear all DreamWeaver data from localStorage
+ * Clear all DreamWeaver data from localStorage (current workspace only)
  */
 export const clearAllData = () => {
-  Object.values(STORAGE_KEYS).forEach((key) => {
-    localStorage.removeItem(key);
-  });
+  localStorage.removeItem(STORAGE_KEYS.CHARACTERS);
+  localStorage.removeItem(STORAGE_KEYS.LOCATIONS);
+  localStorage.removeItem(STORAGE_KEYS.STORY_CONTEXT);
+  localStorage.removeItem(STORAGE_KEYS.BEATS);
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_STORY_ID);
+};
+
+// ============ SAVED STORIES ============
+
+/**
+ * Get all saved stories
+ */
+export const getSavedStories = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.SAVED_STORIES);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error loading saved stories:', error);
+    return [];
+  }
+};
+
+/**
+ * Save the list of stories
+ */
+const saveStoriesList = (stories) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SAVED_STORIES, JSON.stringify(stories));
+    return true;
+  } catch (error) {
+    console.error('Error saving stories list:', error);
+    return false;
+  }
+};
+
+/**
+ * Get current story ID
+ */
+export const getCurrentStoryId = () => {
+  return localStorage.getItem(STORAGE_KEYS.CURRENT_STORY_ID) || null;
+};
+
+/**
+ * Set current story ID
+ */
+export const setCurrentStoryId = (id) => {
+  if (id) {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_STORY_ID, id);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_STORY_ID);
+  }
+};
+
+/**
+ * Save current work as a new story or update existing
+ * @param {string} name - Story name
+ * @param {string|null} existingId - If provided, updates existing story
+ * @returns {Object} - The saved story object
+ */
+export const saveStory = (name, existingId = null) => {
+  const stories = getSavedStories();
+  const now = new Date().toISOString();
+  
+  const storyData = {
+    characters: loadCharacters(),
+    locations: loadLocations(),
+    storyContext: loadStoryContext(),
+    beats: loadBeats(),
+  };
+
+  if (existingId) {
+    // Update existing story
+    const index = stories.findIndex(s => s.id === existingId);
+    if (index !== -1) {
+      stories[index] = {
+        ...stories[index],
+        name,
+        data: storyData,
+        updatedAt: now,
+      };
+      saveStoriesList(stories);
+      setCurrentStoryId(existingId);
+      return stories[index];
+    }
+  }
+  
+  // Create new story
+  const newStory = {
+    id: `story_${Date.now()}`,
+    name: name || `Untitled Story ${stories.length + 1}`,
+    data: storyData,
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  stories.push(newStory);
+  saveStoriesList(stories);
+  setCurrentStoryId(newStory.id);
+  return newStory;
+};
+
+/**
+ * Load a saved story into the current workspace
+ * @param {string} storyId - The story ID to load
+ * @returns {boolean} - Success status
+ */
+export const loadStory = (storyId) => {
+  const stories = getSavedStories();
+  const story = stories.find(s => s.id === storyId);
+  
+  if (!story) {
+    console.error('Story not found:', storyId);
+    return false;
+  }
+
+  try {
+    saveCharacters(story.data.characters || []);
+    saveLocations(story.data.locations || []);
+    saveStoryContext(story.data.storyContext || '');
+    saveBeats(story.data.beats || []);
+    setCurrentStoryId(storyId);
+    return true;
+  } catch (error) {
+    console.error('Error loading story:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete a saved story
+ * @param {string} storyId - The story ID to delete
+ */
+export const deleteStory = (storyId) => {
+  const stories = getSavedStories().filter(s => s.id !== storyId);
+  saveStoriesList(stories);
+  
+  // If we deleted the current story, clear the current ID
+  if (getCurrentStoryId() === storyId) {
+    setCurrentStoryId(null);
+  }
+};
+
+/**
+ * Rename a saved story
+ * @param {string} storyId - The story ID
+ * @param {string} newName - The new name
+ */
+export const renameStory = (storyId, newName) => {
+  const stories = getSavedStories();
+  const index = stories.findIndex(s => s.id === storyId);
+  
+  if (index !== -1) {
+    stories[index].name = newName;
+    stories[index].updatedAt = new Date().toISOString();
+    saveStoriesList(stories);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Start a new story (clear current workspace)
+ */
+export const startNewStory = () => {
+  clearAllData();
+  return true;
 };
 
 export default {
@@ -251,6 +416,15 @@ export default {
   // Beats
   saveBeats,
   loadBeats,
+  // Saved Stories
+  getSavedStories,
+  getCurrentStoryId,
+  setCurrentStoryId,
+  saveStory,
+  loadStory,
+  deleteStory,
+  renameStory,
+  startNewStory,
   // Utils
   fileToBase64,
   extractBase64Data,
