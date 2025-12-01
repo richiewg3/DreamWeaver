@@ -13,8 +13,61 @@ import {
   Clapperboard,
   GripVertical,
   AlertCircle,
+  Camera,
+  Sun,
+  Aperture,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 import { generatePrompt } from '../services/gemini';
+
+// Shot type options for cinematography
+const SHOT_TYPES = [
+  { value: '', label: 'Auto (AI decides)' },
+  { value: 'extreme_wide', label: 'Extreme Wide Shot' },
+  { value: 'wide', label: 'Wide Shot' },
+  { value: 'full', label: 'Full Shot' },
+  { value: 'medium_wide', label: 'Medium Wide Shot' },
+  { value: 'medium', label: 'Medium Shot' },
+  { value: 'medium_close', label: 'Medium Close-Up' },
+  { value: 'close', label: 'Close-Up' },
+  { value: 'extreme_close', label: 'Extreme Close-Up' },
+  { value: 'over_shoulder', label: 'Over-the-Shoulder' },
+  { value: 'pov', label: 'POV Shot' },
+  { value: 'two_shot', label: 'Two Shot' },
+];
+
+// Camera angle options
+const CAMERA_ANGLES = [
+  { value: '', label: 'Auto (AI decides)' },
+  { value: 'eye_level', label: 'Eye Level' },
+  { value: 'low_angle', label: 'Low Angle (heroic)' },
+  { value: 'high_angle', label: 'High Angle (vulnerable)' },
+  { value: 'birds_eye', label: "Bird's Eye View" },
+  { value: 'worms_eye', label: "Worm's Eye View" },
+  { value: 'dutch_angle', label: 'Dutch Angle (tilted)' },
+  { value: 'profile', label: 'Profile View' },
+  { value: 'three_quarter', label: 'Three-Quarter View' },
+];
+
+// Lighting preset options
+const LIGHTING_PRESETS = [
+  { value: '', label: 'Auto (AI decides)' },
+  { value: 'natural_daylight', label: 'Natural Daylight' },
+  { value: 'golden_hour', label: 'Golden Hour' },
+  { value: 'blue_hour', label: 'Blue Hour' },
+  { value: 'overcast', label: 'Overcast/Soft Light' },
+  { value: 'harsh_midday', label: 'Harsh Midday Sun' },
+  { value: 'moonlight', label: 'Moonlight' },
+  { value: 'candlelight', label: 'Candlelight/Warm Glow' },
+  { value: 'neon', label: 'Neon/Cyberpunk' },
+  { value: 'dramatic_shadows', label: 'Dramatic Shadows (Noir)' },
+  { value: 'backlit', label: 'Backlit/Silhouette' },
+  { value: 'rim_light', label: 'Rim Lighting' },
+  { value: 'studio_soft', label: 'Studio Soft Box' },
+  { value: 'firelight', label: 'Firelight' },
+  { value: 'stormy', label: 'Stormy/Dark Atmospheric' },
+];
 
 /**
  * BeatSheet Component
@@ -31,7 +84,8 @@ const BeatSheet = ({
   isApiConfigured,
   isMobile = false,
 }) => {
-  const [expandedBeat, setExpandedBeat] = useState(null);
+  const [expandedPrompt, setExpandedPrompt] = useState(null);
+  const [collapsedBeats, setCollapsedBeats] = useState(new Set());
   const [loadingBeat, setLoadingBeat] = useState(null);
   const [copiedBeat, setCopiedBeat] = useState(null);
 
@@ -41,11 +95,34 @@ const BeatSheet = ({
     return `Beat ${Math.floor(index / 26)}${letters[index % 26]}`;
   };
 
+  const toggleBeatCollapse = (beatId) => {
+    setCollapsedBeats(prev => {
+      const next = new Set(prev);
+      if (next.has(beatId)) {
+        next.delete(beatId);
+      } else {
+        next.add(beatId);
+      }
+      return next;
+    });
+  };
+
+  const collapseAllBeats = () => {
+    setCollapsedBeats(new Set(beats.map(b => b.id)));
+  };
+
+  const expandAllBeats = () => {
+    setCollapsedBeats(new Set());
+  };
+
   const addBeat = () => {
     const newBeat = {
       id: `beat_${Date.now()}`,
       action: '',
       outfitOverride: '',
+      shotType: '',
+      cameraAngle: '',
+      lighting: '',
       generatedPrompt: null,
       isGenerating: false,
       error: null,
@@ -61,7 +138,12 @@ const BeatSheet = ({
 
   const removeBeat = (id) => {
     setBeats(prevBeats => prevBeats.filter((beat) => beat.id !== id));
-    if (expandedBeat === id) setExpandedBeat(null);
+    if (expandedPrompt === id) setExpandedPrompt(null);
+    setCollapsedBeats(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   const generateBeatPrompt = async (beat) => {
@@ -78,17 +160,25 @@ const BeatSheet = ({
       const selectedChars = characters.filter((c) => selectedCharacters.includes(c.id));
       const selectedLocs = locations.filter((l) => selectedLocations.includes(l.id));
 
+      // Find the labels for the selected options
+      const shotTypeLabel = SHOT_TYPES.find(s => s.value === beat.shotType)?.label || '';
+      const cameraAngleLabel = CAMERA_ANGLES.find(a => a.value === beat.cameraAngle)?.label || '';
+      const lightingLabel = LIGHTING_PRESETS.find(l => l.value === beat.lighting)?.label || '';
+
       const result = await generatePrompt({
         storyContext,
         characters: selectedChars,
         locations: selectedLocs,
         beatAction: beat.action,
         outfitOverride: beat.outfitOverride,
+        shotType: beat.shotType ? shotTypeLabel : '',
+        cameraAngle: beat.cameraAngle ? cameraAngleLabel : '',
+        lighting: beat.lighting ? lightingLabel : '',
       });
 
       if (result.success) {
         updateBeat(beat.id, 'generatedPrompt', result.prompt);
-        setExpandedBeat(beat.id);
+        setExpandedPrompt(beat.id);
       } else {
         updateBeat(beat.id, 'error', result.error);
       }
@@ -155,13 +245,33 @@ const BeatSheet = ({
             {beats.length}
           </span>
         </div>
-        <button
-          onClick={addBeat}
-          className="btn-primary flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-medium text-white"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add</span> Beat
-        </button>
+        <div className="flex items-center gap-2">
+          {beats.length > 0 && (
+            <div className="hidden sm:flex items-center gap-1 mr-2">
+              <button
+                onClick={collapseAllBeats}
+                className="p-1.5 rounded-lg hover:bg-midnight-700/50 text-gray-500 hover:text-gray-400 transition-colors"
+                title="Collapse all beats"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={expandAllBeats}
+                className="p-1.5 rounded-lg hover:bg-midnight-700/50 text-gray-500 hover:text-gray-400 transition-colors"
+                title="Expand all beats"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={addBeat}
+            className="btn-primary flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-medium text-white"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add</span> Beat
+          </button>
+        </div>
       </div>
 
       {/* API Warning */}
@@ -197,112 +307,60 @@ const BeatSheet = ({
             </button>
           </div>
         ) : (
-          beats.map((beat, index) => (
+          beats.map((beat, index) => {
+            const isCollapsed = collapsedBeats.has(beat.id);
+            return (
             <div
               key={beat.id}
               className="beat-row rounded-xl p-3 md:p-4 transition-all"
             >
-              {/* Beat Header - Mobile: Stack vertically */}
-              <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
-                {/* Beat Label & Delete (Mobile: Row) */}
-                <div className="flex items-center justify-between md:justify-start gap-2 md:pt-2">
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="w-4 h-4 text-gray-600 cursor-grab hidden md:block" />
-                    <span className="px-2.5 md:px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-xs md:text-sm font-semibold text-gray-200">
-                      {getBeatLabel(index)}
+              {/* Beat Header - Always visible */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <button
+                    onClick={() => toggleBeatCollapse(beat.id)}
+                    className="p-1 rounded-lg hover:bg-midnight-700/50 text-gray-500 hover:text-gray-400 transition-colors"
+                  >
+                    {isCollapsed ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4" />
+                    )}
+                  </button>
+                  <GripVertical className="w-4 h-4 text-gray-600 cursor-grab hidden md:block" />
+                  <span className="px-2.5 md:px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-xs md:text-sm font-semibold text-gray-200">
+                    {getBeatLabel(index)}
+                  </span>
+                  {isCollapsed && beat.action && (
+                    <span className="text-xs text-gray-500 truncate max-w-[200px] md:max-w-[400px]">
+                      {beat.action}
                     </span>
-                  </div>
-                  {/* Mobile delete button */}
-                  <button
-                    onClick={() => removeBeat(beat.id)}
-                    className="md:hidden p-2 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  )}
+                  {isCollapsed && beat.generatedPrompt && (
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-[10px] text-cyan-400">
+                      ✓ Generated
+                    </span>
+                  )}
                 </div>
-
-                {/* Inputs */}
-                <div className="flex-1 space-y-3">
-                  {/* Action Input */}
-                  <div>
-                    <label className="block text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
-                      Action / Scene Description
-                    </label>
-                    <textarea
-                      value={beat.action}
-                      onChange={(e) => updateBeat(beat.id, 'action', e.target.value)}
-                      placeholder="Describe what happens in this beat..."
-                      className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm text-white placeholder-gray-500 resize-none"
-                      rows={isMobile ? 3 : 2}
-                    />
-                  </div>
-
-                  {/* Outfit Override */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
-                      <Shirt className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                      Outfit Override (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={beat.outfitOverride}
-                      onChange={(e) => updateBeat(beat.id, 'outfitOverride', e.target.value)}
-                      placeholder="e.g., 'Wearing a tattered red cloak'"
-                      className="w-full px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm text-white placeholder-gray-500"
-                    />
-                  </div>
-
-                  {/* Mobile Generate Button */}
-                  <button
-                    onClick={() => generateBeatPrompt(beat)}
-                    disabled={loadingBeat === beat.id || !beat.action.trim()}
-                    className={`md:hidden w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      loadingBeat === beat.id
-                        ? 'bg-purple-500/30 text-purple-300 cursor-wait'
-                        : beat.action.trim()
-                        ? 'btn-primary text-white'
-                        : 'bg-midnight-700 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {loadingBeat === beat.id ? (
-                      <>
+                <div className="flex items-center gap-1">
+                  {/* Quick Generate Button when collapsed */}
+                  {isCollapsed && beat.action.trim() && (
+                    <button
+                      onClick={() => generateBeatPrompt(beat)}
+                      disabled={loadingBeat === beat.id}
+                      className={`p-2 rounded-xl transition-colors ${
+                        loadingBeat === beat.id
+                          ? 'bg-purple-500/30 text-purple-300'
+                          : 'hover:bg-purple-500/20 text-purple-400'
+                      }`}
+                    >
+                      {loadingBeat === beat.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
+                      ) : (
                         <Play className="w-4 h-4" />
-                        Generate Prompt
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Desktop Actions */}
-                <div className="hidden md:flex items-center gap-2 pt-2">
-                  <button
-                    onClick={() => generateBeatPrompt(beat)}
-                    disabled={loadingBeat === beat.id || !beat.action.trim()}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      loadingBeat === beat.id
-                        ? 'bg-purple-500/30 text-purple-300 cursor-wait'
-                        : beat.action.trim()
-                        ? 'btn-primary text-white'
-                        : 'bg-midnight-700 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {loadingBeat === beat.id ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        Generate
-                      </>
-                    )}
-                  </button>
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => removeBeat(beat.id)}
                     className="p-2 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
@@ -312,33 +370,180 @@ const BeatSheet = ({
                 </div>
               </div>
 
-              {/* Error Message */}
-              {beat.error && (
-                <div className="mt-3 md:mt-4 p-2.5 md:p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs md:text-sm text-red-300">{beat.error}</p>
+              {/* Expandable Content */}
+              {!isCollapsed && (
+                <div className="mt-3 md:mt-4">
+                  <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
+                    {/* Inputs */}
+                    <div className="flex-1 space-y-3">
+                      {/* Action Input */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                          Action / Scene Description
+                        </label>
+                        <textarea
+                          value={beat.action}
+                          onChange={(e) => updateBeat(beat.id, 'action', e.target.value)}
+                          placeholder="Describe what happens in this beat..."
+                          className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm text-white placeholder-gray-500 resize-none"
+                          rows={isMobile ? 3 : 2}
+                        />
+                      </div>
+
+                      {/* Shot/Lighting Options Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                        {/* Shot Type */}
+                        <div>
+                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <Camera className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            Shot Type
+                          </label>
+                          <select
+                            value={beat.shotType || ''}
+                            onChange={(e) => updateBeat(beat.id, 'shotType', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                          >
+                            {SHOT_TYPES.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Camera Angle */}
+                        <div>
+                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <Aperture className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            Camera Angle
+                          </label>
+                          <select
+                            value={beat.cameraAngle || ''}
+                            onChange={(e) => updateBeat(beat.id, 'cameraAngle', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                          >
+                            {CAMERA_ANGLES.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Lighting */}
+                        <div>
+                          <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                            <Sun className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            Lighting
+                          </label>
+                          <select
+                            value={beat.lighting || ''}
+                            onChange={(e) => updateBeat(beat.id, 'lighting', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-sm text-white bg-midnight-800 border border-indigo-500/20 focus:border-purple-500 focus:outline-none"
+                          >
+                            {LIGHTING_PRESETS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Outfit Override */}
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400 mb-1 md:mb-1.5">
+                          <Shirt className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                          Outfit Override (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={beat.outfitOverride || ''}
+                          onChange={(e) => updateBeat(beat.id, 'outfitOverride', e.target.value)}
+                          placeholder="e.g., 'Wearing a tattered red cloak'"
+                          className="w-full px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm text-white placeholder-gray-500"
+                        />
+                      </div>
+
+                      {/* Generate Button */}
+                      <button
+                        onClick={() => generateBeatPrompt(beat)}
+                        disabled={loadingBeat === beat.id || !beat.action.trim()}
+                        className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                          loadingBeat === beat.id
+                            ? 'bg-purple-500/30 text-purple-300 cursor-wait'
+                            : beat.action.trim()
+                            ? 'btn-primary text-white'
+                            : 'bg-midnight-700 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        {loadingBeat === beat.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            Generate Prompt
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Error Message */}
+                  {beat.error && (
+                    <div className="mt-3 md:mt-4 p-2.5 md:p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs md:text-sm text-red-300">{beat.error}</p>
+                    </div>
+                  )}
+
+                  {/* Generated Prompt */}
+                  {beat.generatedPrompt && (
+                    <div className="mt-3 md:mt-4">
+                      <button
+                        onClick={() => setExpandedPrompt(expandedPrompt === beat.id ? null : beat.id)}
+                        className="flex items-center gap-2 text-xs md:text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        {expandedPrompt === beat.id ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                        {expandedPrompt === beat.id ? 'Hide' : 'Show'} Generated Prompt
+                      </button>
+                      {expandedPrompt === beat.id && renderGeneratedPrompt(beat)}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Generated Prompt */}
-              {beat.generatedPrompt && (
-                <div className="mt-3 md:mt-4">
-                  <button
-                    onClick={() => setExpandedBeat(expandedBeat === beat.id ? null : beat.id)}
-                    className="flex items-center gap-2 text-xs md:text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-                  >
-                    {expandedBeat === beat.id ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                    {expandedBeat === beat.id ? 'Hide' : 'Show'} Generated Prompt
-                  </button>
-                  {expandedBeat === beat.id && renderGeneratedPrompt(beat)}
-                </div>
+              {/* Collapsed view: Show error and prompt toggle */}
+              {isCollapsed && (
+                <>
+                  {beat.error && (
+                    <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <p className="text-xs text-red-300 truncate">{beat.error}</p>
+                    </div>
+                  )}
+                  {beat.generatedPrompt && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setExpandedPrompt(expandedPrompt === beat.id ? null : beat.id)}
+                        className="flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        {expandedPrompt === beat.id ? (
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                        {expandedPrompt === beat.id ? 'Hide' : 'View'} Prompt
+                      </button>
+                      {expandedPrompt === beat.id && renderGeneratedPrompt(beat)}
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          ))
+          );
+          })
         )}
       </div>
     </div>

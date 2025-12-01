@@ -152,7 +152,7 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-input, textarea {
+input, textarea, select {
   background: rgba(18, 18, 26, 0.8);
   border: 1px solid rgba(99, 102, 241, 0.2);
   transition: all 0.2s ease;
@@ -161,15 +161,30 @@ input, textarea {
 }
 
 @media (min-width: 768px) {
-  input, textarea {
+  input, textarea, select {
     font-size: 14px;
   }
 }
 
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--color-dream-purple);
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+select option {
+  background: var(--color-midnight-800);
+  color: #e2e8f0;
+  padding: 8px;
 }
 
 .section-divider {
